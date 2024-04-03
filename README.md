@@ -9,7 +9,7 @@
     pip install selenium
 若存在网络问题安装失败，可以使用以下命令
 
-​```pip install selenium -i https://pypi.mirrors.ustc.edu.cn/simple/
-​```
+    pip install selenium -i https://pypi.mirrors.ustc.edu.cn/simple/
+
 ## 运行程序
 直接运行 DingTalk-Live-Playback-Download-Tool.exe
