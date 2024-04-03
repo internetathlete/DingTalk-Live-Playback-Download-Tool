@@ -3,7 +3,7 @@
 
 ## 安装环境依赖
 ### 下载安装python
-<https://www.python.org/downloads/>
+[https://www.python.org/downloads/](https://www.python.org/downloads/?_blank)
 > 安装时需要勾选“Add to Path”
 ### 安装selenium库
     pip install selenium
