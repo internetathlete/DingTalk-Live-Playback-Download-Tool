@@ -8,7 +8,7 @@
 - 回到程序界面，点击回车即可开始下载
 
 ## Linux/Mac平台使用方法（尚未测试，不建议使用）
-- 下载对应平台架构的N_m3u8DL-RE[https://github.com/nilaoda/N_m3u8DL-RE/releases]，并放至本程序目录下
+- 下载对应平台架构的[N_m3u8DL-RE](https://github.com/nilaoda/N_m3u8DL-RE/releases)，并放至本程序目录下
 - 安装ffmpeg
 - 安装本程序所需依赖
 - 安装所使用浏览器对应的webdriver
