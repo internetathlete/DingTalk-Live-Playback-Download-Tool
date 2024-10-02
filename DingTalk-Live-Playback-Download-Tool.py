@@ -145,7 +145,7 @@ def download_m3u8_with_options(m3u8_file, save_name):
     ]
 
     subprocess.run(command)
-    print("视频下载成功完成。")
+    print(f"视频下载成功完成。文件保存路径: {save_dir}")
 
 def auto_download_m3u8_with_options(m3u8_file, save_name):
     command = [
@@ -156,7 +156,7 @@ def auto_download_m3u8_with_options(m3u8_file, save_name):
     ]
 
     subprocess.run(command)
-    print("视频下载成功完成。")
+    print(f"视频下载成功完成。文件保存路径: {os.getcwd()}")
 
 # 支持默认选项的输入验证函数
 def validate_input(prompt, valid_options, default_option=None):
@@ -210,7 +210,7 @@ if __name__ == "__main__":
                 print("未找到包含 'm3u8' 字符的请求链接。")
 
             print('=' * 50)
-            dingtalk_url = input("请继续输入钉钉直播链接，或输入q退出程序: ")
+            dingtalk_url = input("请继续输入钉钉直播分享链接，或输入q退出程序: ")
             if dingtalk_url.lower() == 'q':
                 if browser:
                     browser.quit()
