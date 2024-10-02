@@ -1,5 +1,6 @@
 # DingTalk-Live-Playback-Download-Tool
 钉钉直播回放下载工具，使用钉钉分享链接一键下载钉钉直播回放视频
+![alt text](image.png)![image](https://github.com/user-attachments/assets/bd8662c8-109d-4d77-be07-e3dccf98a6ac)
 
 ## Windows平台使用方法
 - 直接运行 DingTalk-Live-Playback-Download-Tool.exe
