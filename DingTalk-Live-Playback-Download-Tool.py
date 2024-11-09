@@ -1,5 +1,4 @@
 import os
-import warnings
 import platform
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -12,7 +11,7 @@ import tkinter as tk
 from tkinter import filedialog
 import logging
 import pandas as pd
-import time
+
 
 logging.disable(logging.CRITICAL)  # 禁用所有日志
 
@@ -77,8 +76,6 @@ def get_browser_cookie(url, browser_type='edge'):
             edge_options.add_argument('--disable-usb-device-event-log')
             edge_options.add_argument('--ignore-certificate-errors')
             edge_options.add_argument('--disable-logging')
-            # edge_options.add_argument('--disable-cache')
-            # edge_options.add_argument('--disk-cache-size=0')
             edge_options.add_argument('--disable_ssl_verification')
             edge_options.add_argument('--log-level=3')
             edge_options.add_experimental_option('excludeSwitches', ['enable-logging'])
@@ -93,8 +90,6 @@ def get_browser_cookie(url, browser_type='edge'):
             chrome_options.add_argument('--disable-usb-device-event-log')
             chrome_options.add_argument('--ignore-certificate-errors')
             chrome_options.add_argument('--disable-logging')
-            # chrome_options.add_argument('--disable-cache')
-            # chrome_options.add_argument('--disk-cache-size=0')
             chrome_options.add_argument('--log-level=3')
             # 启用浏览器日志，获取网络请求
             chrome_options.set_capability("goog:loggingPrefs", {
@@ -108,8 +103,6 @@ def get_browser_cookie(url, browser_type='edge'):
             firefox_options.add_argument('--disable-usb-device-event-log')
             firefox_options.add_argument('--ignore-certificate-errors')
             firefox_options.add_argument('--disable-logging')
-            # firefox_options.add_argument('--disable-cache')
-            # firefox_options.add_argument('--disk-cache-size=0')
             firefox_options.add_argument('--log-level=3')
             # 启用Firefox日志
             firefox_options.set_capability('moz:firefoxOptions', {
@@ -147,7 +140,6 @@ def repeat_get_browser_cookie(url):
         
         browser.get(url)
 
-        # m3u8_request = WebDriverWait(browser, 30).until(lambda x: any("m3u8" in entry['name'] for entry in browser.execute_script("return window.performance.getEntriesByType('resource')")))
         WebDriverWait(browser, 2).until(EC.visibility_of_element_located((By.CLASS_NAME, "_3TIxkhmY")))
         headers = browser.execute_script("return Object.fromEntries(new Headers(fetch(arguments[0], { method: 'GET' })).entries())", url)
         live_name_element = browser.find_element(By.CLASS_NAME, "_3TIxkhmY")
@@ -163,52 +155,6 @@ def repeat_get_browser_cookie(url):
         if browser:
             browser.quit()
         sys.exit(1)
-
-# # 获取m3u8链接
-# def get_m3u8_links():
-#     return browser.execute_script("""
-#         var m3u8Links = [];
-#         var requests = performance.getEntriesByType('resource');
-#         for (var request of requests) {
-#             if (request.name.includes("m3u8")) {
-#                 m3u8Links.push(request.name);
-#             }
-#         }
-#         return m3u8Links;
-#     """)
-
-# def refresh_page_by_click(browser):
-#     try:
-#         browser.refresh()
-#         # 使用 XPath 定位刷新按钮并模拟点击
-#         refresh_button = WebDriverWait(browser, 2).until(
-#             EC.element_to_be_clickable((By.XPATH, '//*[@id="J_controls_bar"]/div[2]/button[2]'))
-#         )
-#         refresh_button.click()
-#         print("刷新按钮已点击，页面正在刷新...")
-#     except Exception as e:
-#         print(f"模拟点击刷新按钮时发生错误: {e}")
-
-
-# def fetch_m3u8_links(browser):
-#     for attempt in range(5):
-#         try:
-#             # refresh_page_by_click(browser)
-#             # WebDriverWait(browser, 10).until(lambda x: any("m3u8" in entry['name'] for entry in browser.execute_script("return window.performance.getEntriesByType('resource')")))
-#             # time.sleep(3)
-#             # m3u8_links = browser.execute_script("""
-#             #     var m3u8Links = [];
-#             #     var requests = performance.getEntriesByType('resource');
-#             #     for (var request of requests) {
-#             #         if (request.name.includes("m3u8")) {
-#             #             m3u8Links.push(request.name);
-#             #         }
-#             #     }
-#             #     return m3u8Links;
-#             # """)
-#         except Exception as e:
-#             print(f"获取 m3u8 链接时发生错误: {e}")
-#     return None  # 返回 None 代表三次尝试都失败
 
 def fetch_m3u8_links(browser, browser_type):
     m3u8_links = []  # 初始化为空列表
@@ -280,21 +226,7 @@ def extract_prefix(url):
     match = pattern.search(url)
     return match.group(1) if match else url
 
-def replace_prefix(m3u8_file, prefix):
-    updated_lines = []
-    with open(m3u8_file, 'r') as file:
-        for line in file:
-            index = line.find('/')
-            updated_line = prefix + line[index:] if index != -1 else line
-            updated_lines.append(updated_line)
-
-    output_file = os.path.join(os.path.dirname(m3u8_file), 'modified_' + os.path.basename(m3u8_file))
-    with open(output_file, 'w') as file:
-        file.writelines(updated_lines)
-
-    return output_file
-
-def download_m3u8_with_options(m3u8_file, save_name):
+def download_m3u8_with_options(m3u8_file, save_name, prefix):
     root = tk.Tk()
     root.withdraw()
     save_dir = filedialog.askdirectory(title="选择保存视频的目录")
@@ -302,19 +234,21 @@ def download_m3u8_with_options(m3u8_file, save_name):
     if not save_dir:
         print("用户取消了选择。视频下载已中止。")
         return
+    
 
     command = [
         get_executable_name(),
         m3u8_file,
         "--ui-language", "zh-CN",
         "--save-name", save_name,
-        "--save-dir", save_dir
+        "--save-dir", save_dir,
+        "--base-url", prefix,
     ]
 
     subprocess.run(command)
     print(f"视频下载成功完成。文件保存路径: {save_dir}")
 
-def auto_download_m3u8_with_options(m3u8_file, save_name):
+def auto_download_m3u8_with_options(m3u8_file, save_name, prefix):
     # 获取程序所在的目录
     base_dir = os.path.dirname(os.path.abspath(__file__))
     downloads_dir = os.path.join(base_dir, 'Downloads')
@@ -327,7 +261,8 @@ def auto_download_m3u8_with_options(m3u8_file, save_name):
         m3u8_file,
         "--ui-language", "zh-CN",
         "--save-name", save_name,
-        "--save-dir", downloads_dir
+        "--save-dir", downloads_dir,
+        "--base-url", prefix,
     ]
 
     subprocess.run(command)
@@ -353,13 +288,13 @@ def single_mode():
                     # print(f"当前输入的 m3u8 链接: {link}")
                     m3u8_file = download_m3u8_file(link, 'output.m3u8', m3u8_headers)
                     prefix = extract_prefix(link)
-                    modified_m3u8_file = replace_prefix(m3u8_file, prefix)
+                    # modified_m3u8_file = replace_prefix(m3u8_file, prefix)
                     save_name = live_name
 
                     if save_mode == '1':
-                        auto_download_m3u8_with_options(modified_m3u8_file, save_name)
+                        auto_download_m3u8_with_options(m3u8_file, save_name, prefix)
                     elif save_mode == '2':
-                        download_m3u8_with_options(modified_m3u8_file, save_name)
+                        download_m3u8_with_options(m3u8_file, save_name, prefix)
             else:
                 print("未找到包含 'm3u8' 字符的请求链接。")
 
@@ -405,13 +340,13 @@ def batch_mode():
             for link in m3u8_links:
                 m3u8_file = download_m3u8_file(link, 'output.m3u8', m3u8_headers)
                 prefix = extract_prefix(link)
-                modified_m3u8_file = replace_prefix(m3u8_file, prefix)
+                # modified_m3u8_file = replace_prefix(m3u8_file, prefix)
                 save_name = live_name
 
                 if save_mode == '1':
-                    auto_download_m3u8_with_options(modified_m3u8_file, save_name)
+                    auto_download_m3u8_with_options(m3u8_file, save_name, prefix)
                 elif save_mode == '2':
-                    download_m3u8_with_options(modified_m3u8_file, save_name)
+                    download_m3u8_with_options(m3u8_file, save_name, prefix)
         else:
             print("未找到包含 'm3u8' 字符的请求链接。")
 
@@ -425,13 +360,13 @@ def batch_mode():
                 for link in m3u8_links:
                     m3u8_file = download_m3u8_file(link, 'output.m3u8', m3u8_headers)
                     prefix = extract_prefix(link)
-                    modified_m3u8_file = replace_prefix(m3u8_file, prefix)
+                    # modified_m3u8_file = replace_prefix(m3u8_file, prefix)
                     save_name = live_name
 
                     if save_mode == '1':
-                        auto_download_m3u8_with_options(modified_m3u8_file, save_name)
+                        auto_download_m3u8_with_options(m3u8_file, save_name, prefix)
                     elif save_mode == '2':
-                            download_m3u8_with_options(modified_m3u8_file, save_name)
+                        download_m3u8_with_options(m3u8_file, save_name, prefix)
             print('=' * 100)
 
 
@@ -452,7 +387,7 @@ def batch_mode():
 if __name__ == "__main__":
     print("===============================================")
     print("     欢迎使用钉钉直播回放下载工具 v1.2")
-    print("         构建日期：2024年11月09日")
+    print("         构建日期：2024年11月10日")
     print("===============================================")
 
     try:
