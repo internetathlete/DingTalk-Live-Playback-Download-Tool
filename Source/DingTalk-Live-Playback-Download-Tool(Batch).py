@@ -280,21 +280,21 @@ def extract_prefix(url):
     match = pattern.search(url)
     return match.group(1) if match else url
 
-def replace_prefix(m3u8_file, prefix):
-    updated_lines = []
-    with open(m3u8_file, 'r') as file:
-        for line in file:
-            index = line.find('/')
-            updated_line = prefix + line[index:] if index != -1 else line
-            updated_lines.append(updated_line)
+# def replace_prefix(m3u8_file, prefix):
+#     updated_lines = []
+#     with open(m3u8_file, 'r') as file:
+#         for line in file:
+#             index = line.find('/')
+#             updated_line = prefix + line[index:] if index != -1 else line
+#             updated_lines.append(updated_line)
 
-    output_file = os.path.join(os.path.dirname(m3u8_file), 'modified_' + os.path.basename(m3u8_file))
-    with open(output_file, 'w') as file:
-        file.writelines(updated_lines)
+#     output_file = os.path.join(os.path.dirname(m3u8_file), 'modified_' + os.path.basename(m3u8_file))
+#     with open(output_file, 'w') as file:
+#         file.writelines(updated_lines)
 
-    return output_file
+#     return output_file
 
-def download_m3u8_with_options(m3u8_file, save_name):
+def download_m3u8_with_options(m3u8_file, save_name, prefix):
     root = tk.Tk()
     root.withdraw()
     save_dir = filedialog.askdirectory(title="选择保存视频的目录")
@@ -302,19 +302,21 @@ def download_m3u8_with_options(m3u8_file, save_name):
     if not save_dir:
         print("用户取消了选择。视频下载已中止。")
         return
+    
 
     command = [
         get_executable_name(),
         m3u8_file,
         "--ui-language", "zh-CN",
         "--save-name", save_name,
-        "--save-dir", save_dir
+        "--save-dir", save_dir,
+        "--base-url", prefix,
     ]
 
     subprocess.run(command)
     print(f"视频下载成功完成。文件保存路径: {save_dir}")
 
-def auto_download_m3u8_with_options(m3u8_file, save_name):
+def auto_download_m3u8_with_options(m3u8_file, save_name, prefix):
     # 获取程序所在的目录
     base_dir = os.path.dirname(os.path.abspath(__file__))
     downloads_dir = os.path.join(base_dir, 'Downloads')
@@ -327,7 +329,8 @@ def auto_download_m3u8_with_options(m3u8_file, save_name):
         m3u8_file,
         "--ui-language", "zh-CN",
         "--save-name", save_name,
-        "--save-dir", downloads_dir
+        "--save-dir", downloads_dir,
+        "--base-url", prefix,
     ]
 
     subprocess.run(command)
@@ -337,7 +340,7 @@ def auto_download_m3u8_with_options(m3u8_file, save_name):
 if __name__ == "__main__":
     print("===============================================")
     print("     欢迎使用钉钉直播回放下载工具 v1.2")
-    print("         构建日期：2024年11月09日")
+    print("         构建日期：2024年11月10日")
     print("===============================================")
 
     try:
@@ -360,13 +363,13 @@ if __name__ == "__main__":
             for link in m3u8_links:
                 m3u8_file = download_m3u8_file(link, 'output.m3u8', m3u8_headers)
                 prefix = extract_prefix(link)
-                modified_m3u8_file = replace_prefix(m3u8_file, prefix)
+                # modified_m3u8_file = replace_prefix(m3u8_file, prefix)
                 save_name = live_name
 
                 if save_mode == '1':
-                    auto_download_m3u8_with_options(modified_m3u8_file, save_name)
+                    auto_download_m3u8_with_options(m3u8_file, save_name, prefix)
                 elif save_mode == '2':
-                    download_m3u8_with_options(modified_m3u8_file, save_name)
+                    download_m3u8_with_options(m3u8_file, save_name, prefix)
         else:
             print("未找到包含 'm3u8' 字符的请求链接。")
 
@@ -380,13 +383,13 @@ if __name__ == "__main__":
                 for link in m3u8_links:
                     m3u8_file = download_m3u8_file(link, 'output.m3u8', m3u8_headers)
                     prefix = extract_prefix(link)
-                    modified_m3u8_file = replace_prefix(m3u8_file, prefix)
+                    # modified_m3u8_file = replace_prefix(m3u8_file, prefix)
                     save_name = live_name
 
                     if save_mode == '1':
-                        auto_download_m3u8_with_options(modified_m3u8_file, save_name)
+                        auto_download_m3u8_with_options(m3u8_file, save_name, prefix)
                     elif save_mode == '2':
-                            download_m3u8_with_options(modified_m3u8_file, save_name)
+                        download_m3u8_with_options(m3u8_file, save_name, prefix)
             print('=' * 100)
 
 
