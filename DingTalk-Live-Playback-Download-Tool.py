@@ -41,31 +41,61 @@ def get_executable_name():
 def clean_file_path(input_path):
     return input_path.strip().replace('"', '').replace("'", "")
 
-# 检查文件格式并读取包含钉钉直播链接的CSV或Excel文件
+
 def read_links_file(file_path):
     try:
+        # 清理文件路径
         file_path = clean_file_path(file_path)
-        if file_path.endswith('.csv'):
-            df = pd.read_csv(file_path)
-        elif file_path.endswith(('.xlsx', '.xls')):  # Excel 文件
-            df = pd.read_excel(file_path)
-        else:
-            raise ValueError("文件格式不支持，请使用CSV或Excel文件。")
 
-        # 查找所有以 "https://n.dingtalk.com" 开头的链接
+        # 存储找到的链接
         links = {}
-        for col in df.columns:
-            filtered_links = df[col].dropna().astype(str).apply(lambda x: x if x.startswith("https://n.dingtalk.com") else None)
-            for i, link in filtered_links.dropna().items():
-                links[i] = link
+
+        # 判断文件类型，处理 CSV 文件
+        if file_path.endswith('.csv'):
+            try:
+                # 尝试用 utf-8 编码打开文件
+                df = pd.read_csv(file_path, encoding='utf-8')
+            except UnicodeDecodeError:
+                # 如果 utf-8 编码失败，尝试用 gbk 编码
+                try:
+                    df = pd.read_csv(file_path, encoding='gbk')
+                except UnicodeDecodeError:
+                    print(f"文件 {file_path} 使用的编码无法识别，请尝试其他编码格式。")
+                    sys.exit(1)
+
+            # 遍历 CSV 中所有列和每列的每一行
+            for col in df.columns:
+                # 遍历每个单元格，检查链接
+                for i, value in df[col].dropna().items():
+                    if isinstance(value, str) and value.startswith("https://n.dingtalk.com"):
+                        links[i] = value  # 保存符合条件的链接
+
+        # 判断文件类型，处理 Excel 文件
+        elif file_path.endswith(('.xlsx', '.xls')):  # Excel 文件
+            # 读取整个 Excel 文件
+            xls = pd.ExcelFile(file_path)
+            # 遍历每个工作表
+            for sheet_name in xls.sheet_names:
+                df = pd.read_excel(xls, sheet_name=sheet_name)
+                # 遍历工作表中的每一列
+                for col in df.columns:
+                    # 遍历每个单元格，检查链接
+                    for i, value in df[col].dropna().items():
+                        if isinstance(value, str) and value.startswith("https://n.dingtalk.com"):
+                            links[i] = value  # 保存符合条件的链接
+
+        else:
+            raise ValueError(f"文件格式不支持: {file_path}. 请使用CSV或Excel文件。")
 
         if not links:
             raise ValueError("未找到有效的钉钉直播链接。")
 
         return links
+
     except Exception as e:
         print(f"读取文件时发生错误: {e}")
         sys.exit(1)
+
 
 # 获取浏览器Cookie的函数
 def get_browser_cookie(url, browser_type='edge'):
@@ -249,25 +279,29 @@ def download_m3u8_with_options(m3u8_file, save_name, prefix):
     print(f"视频下载成功完成。文件保存路径: {save_dir}")
 
 def auto_download_m3u8_with_options(m3u8_file, save_name, prefix):
-    # 获取程序所在的目录
-    base_dir = os.path.dirname(os.path.abspath(__file__))
+    # 获取当前工作目录
+    base_dir = os.getcwd()
+    
+    # 确定 Downloads 文件夹的路径
     downloads_dir = os.path.join(base_dir, 'Downloads')
     
-    # 确保 Downloads 目录存在
+    # 确保 Downloads 文件夹存在
     os.makedirs(downloads_dir, exist_ok=True)
-
+    
+    # 构建命令
     command = [
         get_executable_name(),
         m3u8_file,
         "--ui-language", "zh-CN",
         "--save-name", save_name,
-        "--save-dir", downloads_dir,
+        "--save-dir", downloads_dir,  # 设置保存目录为 Downloads 文件夹
         "--base-url", prefix,
     ]
-
+    
+    # 执行命令
     subprocess.run(command)
     print(f"视频下载成功完成。文件保存路径: {downloads_dir}")
-
+    
 # 单个下载模式
 def single_mode():
     try:
