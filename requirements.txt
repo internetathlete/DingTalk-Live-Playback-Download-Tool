@@ -1,0 +1,5 @@
+selenium>=4.6.0
+pandas
+openpyxl
+xlrd
+tkintertable
