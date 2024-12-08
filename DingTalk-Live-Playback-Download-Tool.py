@@ -186,6 +186,52 @@ def repeat_get_browser_cookie(url):
             browser.quit()
         sys.exit(1)
 
+def repeat_process_links(new_links_dict, browser, browser_type, save_mode):
+    """
+    继续处理新输入的钉钉直播回放链接，并下载视频。
+    """
+    total_links = len(new_links_dict)
+    print(f"共提取到 {total_links} 个新的钉钉直播回放分享链接。")
+
+    saved_path = None  # 用于保存路径
+    for idx, dingtalk_url in new_links_dict.items():
+        print(f"正在下载第 {idx + 1} 个视频，共 {total_links} 个视频。")
+        cookies_data, m3u8_headers, live_name = repeat_get_browser_cookie(dingtalk_url)
+        m3u8_links = fetch_m3u8_links(browser, browser_type)
+
+        if m3u8_links:
+            for link in m3u8_links:
+                m3u8_file = download_m3u8_file(link, 'output.m3u8', m3u8_headers)
+                prefix = extract_prefix(link)
+                save_name = live_name
+
+                if save_mode == '1':
+                    saved_path = auto_download_m3u8_with_options(m3u8_file, save_name, prefix)  # 默认下载到 Downloads
+                elif save_mode == '2':
+                    saved_path = download_m3u8_with_reused_path(m3u8_file, save_name, prefix, saved_path)  # 手动选择路径
+
+        print('=' * 100)
+
+    return saved_path
+
+
+def continue_download(saved_path, browser, browser_type):
+    """
+    继续下载新的钉钉直播回放链接。
+    """
+    continue_option = input("是否继续输入钉钉直播回放链接表格路径进行下载？(按Enter继续，按q退出程序): ")
+    if continue_option.lower() == 'q':
+        print("程序已退出。")
+        if browser:
+            browser.quit()
+        return False
+    else:
+        file_path = input("请输入新的钉钉直播回放链接表格路径（支持CSV或Excel格式，可直接将文件拖放进窗口）: ")
+        new_links_dict = read_links_file(file_path)
+        print(f"共提取到 {len(new_links_dict)} 个新的钉钉直播回放分享链接。")
+        saved_path = repeat_process_links(new_links_dict, browser, browser_type)
+        return True, saved_path
+
 def fetch_m3u8_links(browser, browser_type):
     m3u8_links = []  # 初始化为空列表
     for attempt in range(5):
@@ -277,6 +323,34 @@ def download_m3u8_with_options(m3u8_file, save_name, prefix):
 
     subprocess.run(command)
     print(f"视频下载成功完成。文件保存路径: {save_dir}")
+
+# 用于批量下载时，复用保存路径
+def download_m3u8_with_reused_path(m3u8_file, save_name, prefix, saved_path=None):
+    # 如果没有提供已保存的路径，则弹出文件选择框
+    if saved_path is None:
+        root = tk.Tk()
+        root.withdraw()
+        saved_path = filedialog.askdirectory(title="选择保存视频的目录")
+        
+        if not saved_path:
+            print("用户取消了选择。视频下载已中止。")
+            return
+
+    # 构建下载命令
+    command = [
+        get_executable_name(),
+        m3u8_file,
+        "--ui-language", "zh-CN",
+        "--save-name", save_name,
+        "--save-dir", saved_path,
+        "--base-url", prefix,
+    ]
+
+    subprocess.run(command)
+    print(f"视频下载成功完成。文件保存路径: {saved_path}")
+    return saved_path  # 返回已选择的路径，以便后续使用
+
+
 
 def auto_download_m3u8_with_options(m3u8_file, save_name, prefix):
     # 获取当前工作目录
@@ -370,19 +444,18 @@ def batch_mode():
         print(f"正在下载第 1 个视频，共 {total_links} 个视频。")
         m3u8_links = fetch_m3u8_links(browser, browser_type)
 
+        saved_path = None  # 用于保存第一次选择的路径
+
         if m3u8_links:
             for link in m3u8_links:
                 m3u8_file = download_m3u8_file(link, 'output.m3u8', m3u8_headers)
                 prefix = extract_prefix(link)
-                # modified_m3u8_file = replace_prefix(m3u8_file, prefix)
                 save_name = live_name
 
                 if save_mode == '1':
-                    auto_download_m3u8_with_options(m3u8_file, save_name, prefix)
+                    saved_path = auto_download_m3u8_with_options(m3u8_file, save_name, prefix)  # 默认下载到 Downloads
                 elif save_mode == '2':
-                    download_m3u8_with_options(m3u8_file, save_name, prefix)
-        else:
-            print("未找到包含 'm3u8' 字符的请求链接。")
+                    saved_path = download_m3u8_with_reused_path(m3u8_file, save_name, prefix, saved_path)  # 手动选择路径
 
         print('=' * 100)
         for idx, dingtalk_url in list(links_dict.items())[1:]:
@@ -394,15 +467,27 @@ def batch_mode():
                 for link in m3u8_links:
                     m3u8_file = download_m3u8_file(link, 'output.m3u8', m3u8_headers)
                     prefix = extract_prefix(link)
-                    # modified_m3u8_file = replace_prefix(m3u8_file, prefix)
                     save_name = live_name
 
                     if save_mode == '1':
-                        auto_download_m3u8_with_options(m3u8_file, save_name, prefix)
+                        saved_path = auto_download_m3u8_with_options(m3u8_file, save_name, prefix)  # 默认下载到 Downloads
                     elif save_mode == '2':
-                        download_m3u8_with_options(m3u8_file, save_name, prefix)
+                        saved_path = download_m3u8_with_reused_path(m3u8_file, save_name, prefix, saved_path)  # 手动选择路径
             print('=' * 100)
 
+        # 继续下载
+        while True:
+            continue_option = input("是否继续输入钉钉直播回放链接表格路径进行下载？(按Enter继续，按q退出程序): ")
+            if continue_option.lower() == 'q':
+                print("程序已退出。")
+                if browser:
+                    browser.quit()
+                break
+            else:
+                file_path = input("请输入新的钉钉直播回放链接表格路径（支持CSV或Excel格式，可直接将文件拖放进窗口）: ")
+                new_links_dict = read_links_file(file_path)
+                print(f"共提取到 {len(new_links_dict)} 个新的钉钉直播回放分享链接。")
+                saved_path = repeat_process_links(new_links_dict, browser, browser_type, save_mode)
 
     except KeyboardInterrupt:
         print("\n程序已被用户终止。")
@@ -416,12 +501,11 @@ def batch_mode():
             browser.quit()
 
 
-
 # 主程序入口
 if __name__ == "__main__":
     print("===============================================")
     print("     欢迎使用钉钉直播回放下载工具 v1.2")
-    print("         构建日期：2024年11月10日")
+    print("         构建日期：2024年12月8日")
     print("===============================================")
 
     try:
@@ -440,5 +524,4 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"发生错误: {e}")
         if browser:
-            browser.quit()
-    
+            browser.quit()  
