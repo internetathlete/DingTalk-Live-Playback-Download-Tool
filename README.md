@@ -18,7 +18,16 @@
 - 浏览器打开后，登录钉钉账号，等待页面加载完毕
 - 回到程序界面，点击回车即可开始批量下载
   
+
 ![image](https://github.com/user-attachments/assets/e7b9d376-0814-4649-a334-422deb8cc2b3)
 
 ![image](https://github.com/user-attachments/assets/59b7c2e1-a29b-480f-9377-80fc2b6890c2)
 
+
+
+## 使用的工具
+
+本项目使用了以下第三方工具：
+
+- [N_m3u8DL-RE](https://github.com/nilaoda/N_m3u8DL-RE)：一个跨平台的DASH/HLS/MSS下载工具，支持点播和直播（DASH/HLS）视频下载。
+- [FFmpeg](https://ffmpeg.org/)：一个开源的音视频处理工具，支持多种格式的转换、录制和流媒体处理。
