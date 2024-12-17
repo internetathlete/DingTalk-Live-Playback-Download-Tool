@@ -3,6 +3,7 @@ import platform
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support import expected_conditions as EC
 import subprocess
 import sys
@@ -11,6 +12,7 @@ import tkinter as tk
 from tkinter import filedialog
 import logging
 import pandas as pd
+from urllib.parse import urlparse, parse_qs
 
 
 logging.disable(logging.CRITICAL)  # 禁用所有日志
@@ -105,15 +107,16 @@ def get_browser_cookie(url, browser_type='edge'):
             edge_options = webdriver.EdgeOptions()
             edge_options.add_argument('--disable-usb-device-event-log')
             edge_options.add_argument('--ignore-certificate-errors')
-            edge_options.add_argument('--disable-logging')
+            edge_options.add_argument('--disable-logging')          
             edge_options.add_argument('--disable_ssl_verification')
             edge_options.add_argument('--log-level=3')
             edge_options.add_experimental_option('excludeSwitches', ['enable-logging'])
+            edge_options.set_capability("ms:loggingPrefs", {"performance": "ALL"})
             # 启用浏览器日志，获取网络请求
-            edge_options.set_capability("ms:loggingPrefs", {
-                'browser': 'ALL',       # 启用浏览器日志
-                'performance': 'ALL'    # 启用性能日志
-            })
+            # edge_options.set_capability("ms:loggingPrefs", {
+            #     'browser': 'ALL',       # 启用浏览器日志
+            #     'performance': 'ALL'    # 启用性能日志
+            # })
             browser = webdriver.Edge(options=edge_options)
         elif browser_type == 'chrome':
             chrome_options = webdriver.ChromeOptions()
@@ -122,11 +125,11 @@ def get_browser_cookie(url, browser_type='edge'):
             chrome_options.add_argument('--disable-logging')
             chrome_options.add_argument('--log-level=3')
             # 启用浏览器日志，获取网络请求
-            chrome_options.set_capability("goog:loggingPrefs", {
-                'browser': 'ALL',       # 启用浏览器日志
-                'performance': 'ALL'    # 启用性能日志
-            })
-
+            # chrome_options.set_capability("goog:loggingPrefs", {
+            #     'browser': 'ALL',       # 启用浏览器日志
+            #     'performance': 'ALL'    # 启用性能日志
+            # })
+            chrome_options.set_capability("goog:loggingPrefs", {"performance": "ALL"})
             browser = webdriver.Chrome(options=chrome_options)
         elif browser_type == 'firefox':
             firefox_options = webdriver.FirefoxOptions()
@@ -169,7 +172,6 @@ def repeat_get_browser_cookie(url):
             return get_browser_cookie(url)
         
         browser.get(url)
-
         WebDriverWait(browser, 2).until(EC.visibility_of_element_located((By.CLASS_NAME, "_3TIxkhmY")))
         headers = browser.execute_script("return Object.fromEntries(new Headers(fetch(arguments[0], { method: 'GET' })).entries())", url)
         live_name_element = browser.find_element(By.CLASS_NAME, "_3TIxkhmY")
@@ -197,7 +199,7 @@ def repeat_process_links(new_links_dict, browser, browser_type, save_mode):
     for idx, dingtalk_url in new_links_dict.items():
         print(f"正在下载第 {idx + 1} 个视频，共 {total_links} 个视频。")
         cookies_data, m3u8_headers, live_name = repeat_get_browser_cookie(dingtalk_url)
-        m3u8_links = fetch_m3u8_links(browser, browser_type)
+        m3u8_links = fetch_m3u8_links(browser, browser_type, dingtalk_url)
 
         if m3u8_links:
             for link in m3u8_links:
@@ -231,41 +233,90 @@ def continue_download(saved_path, browser, browser_type):
         print(f"共提取到 {len(new_links_dict)} 个新的钉钉直播回放分享链接。")
         saved_path = repeat_process_links(new_links_dict, browser, browser_type)
         return True, saved_path
+import json
+import os
+import time
 
-def fetch_m3u8_links(browser, browser_type):
+# def save_logs_to_file(logs):
+#     # 获取当前时间戳，确保文件名唯一
+#     timestamp = time.strftime("%Y%m%d_%H%M%S")
+#     file_name = f"logs_{timestamp}.json"
+    
+#     # 如果 logs.json 已经存在，自动修改文件名
+#     count = 1
+#     while os.path.exists(file_name):
+#         file_name = f"logs_{timestamp}_{count}.json"
+#         count += 1
+    
+#     # 将日志内容写入文件
+#     try:
+#         with open(file_name, 'w', encoding='utf-8') as f:
+#             json.dump(logs, f, ensure_ascii=False, indent=4)
+#         print(f"日志已保存为 {file_name}")
+#     except Exception as e:
+#         print(f"保存日志时发生错误: {e}")
+
+import re
+from urllib.parse import urlparse, parse_qs
+
+def fetch_m3u8_links(browser, browser_type, dingtalk_url):
     m3u8_links = []  # 初始化为空列表
-    for attempt in range(5):
+    # 从用户输入的URL中提取 liveUuid
+    parsed_url = urlparse(dingtalk_url)
+    query_params = parse_qs(parsed_url.query)
+    live_uuid = query_params.get('liveUuid', [None])[0]
+
+    if not live_uuid:
+        print("未能从 URL 提取 liveUuid，程序将退出。")
+        return None
+
+    for attempt in range(5):  # 重试次数为 5（你可以根据需要调整）
         try:
-            # 根据浏览器类型获取日志
             if browser_type == 'chrome' or browser_type == 'edge':  # Chrome 和 Edge 使用 get_log
                 logs = browser.get_log("performance")
-            elif browser_type == 'firefox':  # Firefox 使用 execute_script
+#                 # 将获取到的 logs 保存为日志文件
+#                 save_logs_to_file(logs)
+            elif browser_type == 'firefox':  # Firefox 使用 execute_script 和正则表达式
                 logs = browser.execute_script("""
                     var performance = window.performance || window.mozPerformance || window.msPerformance || window.webkitPerformance || {};
                     var network = performance.getEntries() || {};
                     return network;
                 """)
-
-            # 遍历日志，提取第一个包含 m3u8 的链接
+#                 # 将获取到的 logs 保存为日志文件
+#                 save_logs_to_file(logs)
+            # 遍历日志，提取 m3u8 链接
             for log in logs:
                 try:
                     # 根据浏览器的不同处理日志
-                    if 'message' in log:  # Chrome 和 Edge 的日志结构
-                        log_message = log['message']
-                    else:  # Firefox 的日志结构是直接在 log 对象中
+                    if browser_type == 'firefox':
+                        # 使用正则表达式从日志中提取 m3u8 链接
                         log_message = str(log)
+                        pattern = r'https://[^,\'"]+\.m3u8\?[^\'"]+'
+                        found_links = re.findall(pattern, log_message)
 
-                    # 使用正则表达式从日志中提取 m3u8 链接
-                    pattern = r'https://[^,\'"]+\.m3u8\?[^\'"]+'
-                    found_links = re.findall(pattern, log_message)
+                        if found_links:
+                            # 清理末尾的 "]" 和 "\" 等不必要字符
+                            cleaned_link = re.sub(r'[\]\s\\\'"]+$', '', found_links[0])
+                            m3u8_links.append(cleaned_link)  # 使用 append() 将链接添加到列表
+                            print(f"获取到m3u8链接: {cleaned_link}")  # 输出第一条符合条件的链接
+                            return m3u8_links  # 返回第一个捕获到的链接
 
+                    else:  # Chrome 和 Edge 的日志结构
+                        if 'message' in log:
+                            log_message = log['message']
+                        else:
+                            log_message = str(log)
 
-                    if found_links:
-                        # 清理末尾的 "]" 和 "\" 等不必要字符（适用于 Chrome 和 Edge）
-                        cleaned_link = re.sub(r'[\]\s\\\'"]+$', '', found_links[0])
-                        m3u8_links.append(cleaned_link)  # 使用 append() 将链接添加到列表
-                        # print(f"捕获到第一个 m3u8 链接: {cleaned_link}")
-                        return m3u8_links  # 返回第一个捕获到的链接
+                        if '.m3u8' in log_message:
+                            start_idx = log_message.find("url\":\"") + len("url\":\"")
+                            end_idx = log_message.find("\"", start_idx)
+                            m3u8_url = log_message[start_idx:end_idx]
+
+                            # 只在链接中包含 liveUuid 时，才加入到列表
+                            if live_uuid in m3u8_url:
+                                print(f"获取到m3u8链接: {m3u8_url}")  # 输出第一条符合条件的链接
+                                m3u8_links.append(m3u8_url)
+                                return m3u8_links  # 找到后直接返回并退出函数
 
                 except Exception as e:
                     print(f"处理日志时发生错误: {e}")
@@ -275,7 +326,8 @@ def fetch_m3u8_links(browser, browser_type):
             refresh_page_by_click(browser)
 
         except Exception as e:
-            print(f"获取 m3u8 铯链接时发生错误: {e}")
+            print(f"获取 m3u8 链接时发生错误: {e}")
+    
     return None  # 如果尝试多次仍未找到，返回 None
 
 def refresh_page_by_click(browser):
@@ -387,7 +439,7 @@ def single_mode():
         browser, cookies_data, m3u8_headers, live_name = get_browser_cookie(dingtalk_url, browser_type)
 
         while True:
-            m3u8_links = fetch_m3u8_links(browser, browser_type)
+            m3u8_links = fetch_m3u8_links(browser, browser_type, dingtalk_url)
 
             # print(m3u8_links)
 
@@ -442,7 +494,7 @@ def batch_mode():
         first_link = next(iter(links_dict.values()))
         browser, cookies_data, m3u8_headers, live_name = get_browser_cookie(first_link, browser_type)
         print(f"正在下载第 1 个视频，共 {total_links} 个视频。")
-        m3u8_links = fetch_m3u8_links(browser, browser_type)
+        m3u8_links = fetch_m3u8_links(browser, browser_type, first_link)
 
         saved_path = None  # 用于保存第一次选择的路径
 
@@ -461,7 +513,7 @@ def batch_mode():
         for idx, dingtalk_url in list(links_dict.items())[1:]:
             print(f"正在下载第 {idx + 1} 个视频，共 {total_links} 个视频。")
             cookies_data, m3u8_headers, live_name = repeat_get_browser_cookie(dingtalk_url)
-            m3u8_links = fetch_m3u8_links(browser, browser_type)
+            m3u8_links = fetch_m3u8_links(browser, browser_type, dingtalk_url)
 
             if m3u8_links:
                 for link in m3u8_links:
@@ -486,7 +538,7 @@ def batch_mode():
             else:
                 file_path = input("请输入新的钉钉直播回放链接表格路径（支持CSV或Excel格式，可直接将文件拖放进窗口）: ")
                 new_links_dict = read_links_file(file_path)
-                print(f"共提取到 {len(new_links_dict)} 个新的钉钉直播回放分享链接。")
+                # print(f"共提取到 {len(new_links_dict)} 个新的钉钉直播回放分享链接。")
                 saved_path = repeat_process_links(new_links_dict, browser, browser_type, save_mode)
 
     except KeyboardInterrupt:
