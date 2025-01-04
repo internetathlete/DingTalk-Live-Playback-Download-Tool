@@ -151,8 +151,23 @@ def get_browser_cookie(url, browser_type='edge'):
         input("请在浏览器中登录钉钉账户后，按Enter键继续...")
 
         headers = browser.execute_script("return Object.fromEntries(new Headers(fetch(arguments[0], { method: 'GET' })).entries())", url)
-        live_name_element = browser.find_element(By.CLASS_NAME, "_3TIxkhmY")
-        live_name = live_name_element.text
+        try:
+        # 尝试通过XPath获取直播视频名称
+            live_name = browser.find_element(By.XPATH, '//*[@id="live-room"]/div[1]/div[1]/h3').text
+               
+        except Exception as e:
+            print(f"XPath 获取失败: {e}")
+            try:
+                # 如果XPath获取失败，尝试通过class获取
+                live_name = browser.find_element(By.CLASS_NAME, "vwi5-oG8").text      
+            except Exception as e:
+                print(f"CSS Selector 获取失败: {e}")
+                # 如果两者都失败，则使用缺省值
+                live_name = "直播视频名称不可获取"
+        
+        
+#        live_name_element = browser.find_element(By.CLASS_NAME, "vwi5-oG8")
+ #       live_name = live_name_element.text
         print(f"直播名称: {live_name}")
 
         cookies = browser.get_cookies()
@@ -172,10 +187,24 @@ def repeat_get_browser_cookie(url):
             return get_browser_cookie(url)
         
         browser.get(url)
-        WebDriverWait(browser, 2).until(EC.visibility_of_element_located((By.CLASS_NAME, "_3TIxkhmY")))
+#        WebDriverWait(browser, 2).until(EC.visibility_of_element_located((By.CLASS_NAME, "vwi5-oG8")))
+        WebDriverWait(browser, 2).until(EC.visibility_of_element_located((By.XPATH, '//*[@id="live-room"]/div[1]/div[1]/h3')))
         headers = browser.execute_script("return Object.fromEntries(new Headers(fetch(arguments[0], { method: 'GET' })).entries())", url)
-        live_name_element = browser.find_element(By.CLASS_NAME, "_3TIxkhmY")
-        live_name = live_name_element.text
+        try:
+        # 尝试通过XPath获取直播视频名称
+            live_name = browser.find_element(By.XPATH, '//*[@id="live-room"]/div[1]/div[1]/h3').text
+               
+        except Exception as e:
+            print(f"XPath 获取失败: {e}")
+            try:
+                # 如果XPath获取失败，尝试通过class获取
+                live_name = browser.find_element(By.CLASS_NAME, "vwi5-oG80").text      
+            except Exception as e:
+                print(f"CSS Selector 获取失败: {e}")
+                # 如果两者都失败，则使用缺省值
+                live_name = "直播视频名称不可获取"
+#        live_name_element = browser.find_element(By.CLASS_NAME, "vwi5-oG8")
+#        live_name = live_name_element.text
         print(f"直播名称: {live_name}")
 
         cookies = browser.get_cookies()
