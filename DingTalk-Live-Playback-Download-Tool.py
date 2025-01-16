@@ -187,8 +187,11 @@ def repeat_get_browser_cookie(url):
             return get_browser_cookie(url)
         
         browser.get(url)
-#        WebDriverWait(browser, 2).until(EC.visibility_of_element_located((By.CLASS_NAME, "vwi5-oG8")))
-        WebDriverWait(browser, 2).until(EC.visibility_of_element_located((By.XPATH, '//*[@id="live-room"]/div[1]/div[1]/h3')))
+        try:
+            WebDriverWait(browser, 20).until(lambda driver: driver.execute_script("return isNaN(document.querySelector('video')?.duration)") == False)
+        except Exception as e:
+            # 可能因为加载超时，可能因为视频不合法
+            input("未能确定页面是否成功加载。请在页面加载后，按Enter键继续...")
         headers = browser.execute_script("return Object.fromEntries(new Headers(fetch(arguments[0], { method: 'GET' })).entries())", url)
         try:
         # 尝试通过XPath获取直播视频名称
