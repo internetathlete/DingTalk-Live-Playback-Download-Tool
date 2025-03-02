@@ -1,3 +1,5 @@
+# 本项目方法已失效，停止更新 2025.03.02
+
 # DingTalk-Live-Playback-Download-Tool
 钉钉直播回放下载工具，使用钉钉分享链接一键下载钉钉直播回放视频，现已支持批量下载
 ![image](https://github.com/user-attachments/assets/0de8822a-fe81-4726-b8fb-8540b9197908)
